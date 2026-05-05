@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Elite Remodels — Team Calendar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <!--
+  ══════════════════════════════════════════════════════════════════
+  CONNECT TO GOOGLE CALENDAR — MULTI-CALENDAR (PER PERSON) MODE
+  ──────────────────────────────────────────────────────────────────
+  In Google Workspace / Google Calendar, each team member has their
+  own calendar. To show who is on an event:
+
+  Option A — SHARED CALENDARS (Recommended)
+    Each person shares their calendar with a "viewer" service account
+    or admin. The app reads all calendars and merges events. Events
+    that appear on multiple people's calendars are shown with
+    multiple color stripes — exactly like Teamup.
+
+  Option B — GOOGLE CALENDAR INVITE ATTENDEES
+    One shared "Elite Remodels" calendar holds all events. Each event
+    has attendees (team members). The app reads the attendees list
+    and colors the event accordingly.
+
+  Setup steps:
+  1. console.cloud.google.com → Enable Google Calendar API
+  2. OAuth 2.0 Client ID → paste CLIENT_ID + API_KEY below
+  3. Uncomment the script tags and LIVE MODE block at the bottom
+  ══════════════════════════════════════════════════════════════════
+  -->
+  <!-- UNCOMMENT FOR LIVE MODE:
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client"></script>
+  -->
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --serif:   'Fraunces', Georgia, serif;
+      --sans:    'DM Sans', system-ui, sans-serif;
+      --bg:      #f5f0eb;
+      --surface: #fdfaf7;
+      --surface2:#f0ebe4;
+      --border:  #e2d9cf;
+      --border2: #cdc3b8;
+      --text:    #1c1814;
+      --muted:   #7a6f65;
+      --faint:   #b5a99e;
+      --accent:  #b35a2a;
+      --radius:  12px;
+      --rsm:     7px;
+      --shadow:  0 1px 4px rgba(0,0,0,.06), 0 6px 20px rgba(0,0,0,.07);
+      --shadow-lg: 0 12px 48px rgba(0,0,0,.18);
+    }
+
+    body { font-family:var(--sans); background:var(--bg); color:var(--text); min-height:100vh; padding:24px 16px 60px; }
+
+    /* ── TOPBAR ─────────────────────────────────────────── */
+    .topbar { display:flex; align-items:center; justify-content:space-between; max-width:1200px; margin:0 auto 18px; flex-wrap:wrap; gap:12px; }
+    .brand  { display:flex; align-items:center; gap:11px; }
+    .brand-mark { width:36px; height:36px; border-radius:10px; background:var(--accent); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .brand-name { font-family:var(--serif); font-size:17px; font-weight:400; letter-spacing:-.01em; line-height:1.15; }
+    .brand-sub  { font-size:11px; color:var(--muted); margin-top:1px; }
+    .demo-chip  { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:20px; background:#fdf0e8; border:1px solid #f0c8a0; font-size:11px; color:#8a4a15; font-weight:500; }
+    .connect-btn{ display:flex; align-items:center; gap:7px; padding:8px 14px; border-radius:var(--rsm); border:1px solid var(--border2); background:var(--surface); font-family:var(--sans); font-size:13px; color:var(--muted); cursor:pointer; transition:all .15s; }
+    .connect-btn:hover { border-color:var(--accent); color:var(--accent); background:#fdf7f4; }
+
+    /* ── SHELL ──────────────────────────────────────────── */
+    .cal-wrap { max-width:1200px; margin:0 auto; background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); box-shadow:var(--shadow); overflow:hidden; position:relative; }
+
+    /* ── HEADER ─────────────────────────────────────────── */
+    .cal-hdr { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:10px; }
+    .cal-nav { display:flex; align-items:center; gap:8px; }
+    .nav-btn { width:32px; height:32px; border-radius:var(--rsm); border:1px solid var(--border); background:transparent; cursor:pointer; font-size:18px; color:var(--muted); display:flex; align-items:center; justify-content:center; transition:all .12s; font-family:var(--sans); }
+    .nav-btn:hover { background:var(--surface2); border-color:var(--border2); color:var(--text); }
+    .month-lbl { font-family:var(--serif); font-size:19px; font-weight:400; letter-spacing:-.02em; min-width:178px; }
+    .today-btn { padding:5px 12px; border-radius:var(--rsm); border:1px solid var(--border); background:transparent; font-family:var(--sans); font-size:12px; color:var(--muted); cursor:pointer; transition:all .12s; }
+    .today-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+    /* ── PERSON LEGEND / FILTERS ────────────────────────── */
+    .legend-bar { padding:10px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:6px; flex-wrap:wrap; background:var(--surface2); }
+    .legend-lbl { font-size:10.5px; font-weight:500; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; margin-right:4px; }
+    .person-pill { display:flex; align-items:center; gap:6px; padding:5px 11px 5px 7px; border-radius:20px; border:1px solid var(--border); background:transparent; font-family:var(--sans); font-size:12px; color:var(--muted); cursor:pointer; transition:all .15s; user-select:none; }
+    .person-pill.on { font-weight:500; }
+    .person-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .new-btn { display:flex; align-items:center; gap:5px; padding:6px 13px; border-radius:var(--rsm); border:none; background:var(--accent); font-family:var(--sans); font-size:12.5px; font-weight:500; color:#fff; cursor:pointer; transition:opacity .12s; margin-left:auto; }
+    .new-btn:hover { opacity:.88; }
+
+    /* ── DAY HEADERS ────────────────────────────────────── */
+    .day-hdrs { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); border-bottom:1px solid var(--border); background:var(--surface2); }
+    .day-hdr  { padding:7px 0; text-align:center; font-size:10.5px; font-weight:500; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; }
+
+    /* ── GRID ───────────────────────────────────────────── */
+    .cal-week { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); border-bottom:1px solid var(--border); }
+    .cal-week:last-child { border-bottom:none; }
+    .cal-day  { border-left:1px solid var(--border); padding:7px; min-height:90px; cursor:pointer; transition:background .1s; }
+    .cal-day:first-child { border-left:none; }
+    .cal-day:hover { background:#faf6f2; }
+    .cal-day.other { background:var(--surface2); opacity:.6; cursor:default; }
+    .cal-day.other:hover { background:var(--surface2); }
+
+    .day-num { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12.5px; margin-bottom:4px; transition:background .12s; cursor:pointer; user-select:none; }
+    .day-num:hover { background:var(--border); }
+    .cal-day.other .day-num { color:var(--faint); cursor:default; }
+    .day-num.today { background:var(--accent)!important; color:#fff!important; font-weight:500; }
+
+    /* ── EVENT PILL — multi-stripe ──────────────────────── */
+    .ev-pill {
+      display:flex; align-items:center;
+      border-radius:4px; margin-bottom:3px;
+      cursor:pointer; overflow:hidden;
+      font-size:11.5px; line-height:1.5;
+      transition:filter .1s;
+      min-height:20px;
+    }
+    .ev-pill:hover { filter:brightness(.93); }
+
+    /* The colored stripe bar on the left */
+    .ev-stripe {
+      display:flex; flex-direction:column;
+      width:6px; flex-shrink:0; align-self:stretch;
+      overflow:hidden; border-radius:2px 0 0 2px;
+    }
+    .ev-stripe-seg { flex:1; }
+
+    /* The text body */
+    .ev-body {
+      flex:1; padding:2px 5px;
+      background:#f2ede8;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      color:var(--text); font-size:11.5px;
+      border-radius:0 3px 3px 0;
+    }
+    .ev-time { font-size:10px; color:var(--muted); margin-right:3px; }
+
+    /* Avatar row inside detail modal */
+    .avatar-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .avatar-chip { display:flex; align-items:center; gap:5px; padding:3px 8px 3px 4px; border-radius:20px; font-size:12px; font-weight:500; }
+    .avatar-circle { width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; color:#fff; flex-shrink:0; }
+
+    /* ── FOOTER ─────────────────────────────────────────── */
+    .cal-footer { padding:9px 20px; border-top:1px solid var(--border); display:flex; align-items:center; gap:8px; background:var(--surface2); }
+    .footer-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); flex-shrink:0; }
+    .footer-txt { font-size:12px; color:var(--muted); }
+
+    /* ── OVERLAY / MODAL ────────────────────────────────── */
+    .overlay { position:absolute; inset:0; background:rgba(20,15,10,.24); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; z-index:100; animation:fadeIn .15s ease; }
+    @keyframes fadeIn { from{opacity:0}to{opacity:1} }
+    .modal { background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); box-shadow:var(--shadow-lg); padding:24px; width:380px; max-width:94%; animation:slideUp .18s ease; }
+    .modal.wide { width:410px; }
+    @keyframes slideUp { from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)} }
+    .modal-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:14px; }
+    .close-x { background:none; border:none; cursor:pointer; font-size:22px; line-height:1; color:var(--muted); padding:0; margin-top:-3px; transition:color .12s; }
+    .close-x:hover { color:var(--text); }
+    .det-title { font-family:var(--serif); font-size:18px; font-weight:400; letter-spacing:-.01em; margin-bottom:14px; line-height:1.3; }
+    .det-row { display:flex; align-items:flex-start; gap:8px; font-size:13px; color:var(--muted); margin-bottom:8px; }
+    .det-row svg { flex-shrink:0; margin-top:1px; }
+    .det-desc { font-size:13px; color:var(--text); line-height:1.65; padding:12px 13px; background:var(--surface2); border-radius:var(--rsm); margin:14px 0 18px; border:1px solid var(--border); }
+    .modal-actions { display:flex; gap:8px; }
+    .btn-out { flex:1; padding:9px; border-radius:var(--rsm); border:1px solid var(--border); background:transparent; font-family:var(--sans); font-size:13px; color:var(--text); cursor:pointer; transition:all .12s; }
+    .btn-out:hover { border-color:var(--border2); background:var(--surface2); }
+    .btn-del { padding:9px 14px; border-radius:var(--rsm); border:1px solid #f0a0a0; background:#fef0f0; font-family:var(--sans); font-size:13px; color:#b83232; cursor:pointer; transition:all .12s; display:flex; align-items:center; gap:5px; }
+    .btn-del:hover { background:#fee4e4; }
+    .btn-pri { flex:2; padding:9px; border-radius:var(--rsm); border:none; background:var(--accent); font-family:var(--sans); font-size:13px; font-weight:500; color:#fff; cursor:pointer; transition:opacity .12s; }
+    .btn-pri:hover { opacity:.88; }
+    .btn-pri:disabled { background:#d4a07a; cursor:default; opacity:1; }
+
+    /* ── FORM ───────────────────────────────────────────── */
+    .f-lbl { font-size:10px; font-weight:500; color:var(--muted); letter-spacing:.07em; text-transform:uppercase; display:block; margin-bottom:5px; }
+    .f-grp { margin-bottom:12px; }
+    input[type=text], textarea { display:block; width:100%; padding:8px 10px; border-radius:var(--rsm); border:1px solid var(--border); background:var(--surface); font-family:var(--sans); font-size:13px; color:var(--text); outline:none; transition:border-color .15s; }
+    input[type=text]:focus, textarea:focus { border-color:var(--accent); }
+    .f-title { font-family:var(--serif); font-size:16px; }
+    textarea { resize:none; line-height:1.6; }
+    .time-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .person-sel-grid { display:flex; flex-wrap:wrap; gap:5px; }
+    .pcheck { display:flex; align-items:center; gap:6px; padding:4px 10px 4px 6px; border-radius:20px; border:1px solid var(--border); font-family:var(--sans); font-size:12px; cursor:pointer; transition:all .15s; user-select:none; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+        <path d="M3 9.5L10 3l7 6.5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M7 18v-6h6v6" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">Elite Remodels</div>
+      <div class="brand-sub">Team Calendar — Per-Person View</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:9px">
+    <span class="demo-chip">
+      <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#8a4a15" stroke-width="1.5"/><path d="M8 5v4" stroke="#8a4a15" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".75" fill="#8a4a15"/></svg>
+      Demo mode
+    </span>
+    <button class="connect-btn" onclick="alert('See HTML source comments for Google Calendar setup instructions.')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Connect Google Calendar
+    </button>
+  </div>
+</div>
+
+<div class="cal-wrap" id="calWrap">
+
+  <!-- NAV -->
+  <div class="cal-hdr">
+    <div class="cal-nav">
+      <button class="nav-btn" id="prevBtn">&#8249;</button>
+      <span class="month-lbl" id="monthLbl"></span>
+      <button class="nav-btn" id="nextBtn">&#8250;</button>
+      <button class="today-btn" id="todayBtn">Today</button>
+    </div>
+    <button class="new-btn" onclick="openCreate(todayStr)">+ New event</button>
+  </div>
+
+  <!-- PERSON LEGEND / FILTERS -->
+  <div class="legend-bar" id="legendBar">
+    <span class="legend-lbl">Calendars:</span>
+  </div>
+
+  <!-- DAY LABELS -->
+  <div class="day-hdrs">
+    <div class="day-hdr">Sun</div><div class="day-hdr">Mon</div>
+    <div class="day-hdr">Tue</div><div class="day-hdr">Wed</div>
+    <div class="day-hdr">Thu</div><div class="day-hdr">Fri</div>
+    <div class="day-hdr">Sat</div>
+  </div>
+
+  <div id="calGrid"></div>
+
+  <div class="cal-footer">
+    <div class="footer-dot"></div>
+    <span class="footer-txt">Click an event to see who's on it · Click a day or "+ New event" to schedule · Toggle names above to filter</span>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="overlay" class="overlay" style="display:none" onclick="handleOverlay(event)">
+  <div id="modalCard" class="modal" onclick="event.stopPropagation()"></div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   TEAM MEMBERS — each person = one calendar color
+   In live mode, each maps to a Google Calendar ID
+══════════════════════════════════════════════════════════════ */
+const PEOPLE = {
+  owner:  { name:'Owner',          color:'#2d7dd2', light:'#ddeeff', gCalId:'owner@eliteremodels.com'   },
+  marcus: { name:'Marcus (PM)',     color:'#2a9d5c', light:'#d6f2e4', gCalId:'marcus@eliteremodels.com'  },
+  tom:    { name:'Tom (Lead)',       color:'#d45a2a', light:'#fae3d6', gCalId:'tom@eliteremodels.com'     },
+  diego:  { name:'Diego (Crew)',    color:'#7b5ea7', light:'#ede6f7', gCalId:'diego@eliteremodels.com'   },
+  sarah:  { name:'Sarah (Design)',  color:'#b5386e', light:'#fbe0ec', gCalId:'sarah@eliteremodels.com'   },
+  alex:   { name:'Alex (Est.)',     color:'#c08000', light:'#fdf0cc', gCalId:'alex@eliteremodels.com'    },
+};
+
+/* ══════════════════════════════════════════════════════════════
+   EVENTS — people[] lists who is on this event
+   Multiple people = multiple color stripes on the pill
+══════════════════════════════════════════════════════════════ */
+let events = [
+  { id:1,  title:'Hartley Kitchen — Site Visit',      people:['owner','marcus','tom'],  date:'2026-05-04', time:'8:00 AM',  end:'9:30 AM',   loc:'142 Sycamore Rd, Santa Barbara',     desc:'Phase 2 tile and cabinet inspection. Marcus leads walkthrough, Tom confirms structural sign-off.' },
+  { id:2,  title:'Design Consultation — Garcias',     people:['owner','sarah'],         date:'2026-05-04', time:'2:00 PM',  end:'3:00 PM',   loc:'Office — 802 Chapala St',            desc:'$375 paid consultation. Kitchen + primary bath. Budget: $95–120k. Sarah presenting design concepts.' },
+  { id:3,  title:'Weekly Team Standup',               people:['owner','marcus','sarah','alex','tom','diego'], date:'2026-05-05', time:'9:00 AM', end:'9:30 AM', loc:'Slack Huddle', desc:'All-hands. Project status, new leads, schedule review.' },
+  { id:4,  title:'Permit Submission — Morales',       people:['marcus','alex'],          date:'2026-05-05', time:'All day',  end:'',          loc:'SB Building Dept.',                  desc:'Submit permit packet for Morales bath addition. Alex finalizes drawings, Marcus delivers.' },
+  { id:5,  title:'Delacroix Bath — Framing Day 1',   people:['tom','diego'],            date:'2026-05-06', time:'7:30 AM',  end:'5:00 PM',   loc:'88 Olive Mill Rd, Montecito',        desc:'Framing crew on-site. Tom leads. Diego handles rough plumbing blocking.' },
+  { id:6,  title:'Client Check-in — Hartley',        people:['owner','marcus'],         date:'2026-05-06', time:'4:30 PM',  end:'5:00 PM',   loc:'Phone / Zoom',                       desc:'Weekly update call. Marcus preps progress photos, Owner handles relationship.' },
+  { id:7,  title:'Supplier Meeting — Pacific Tile',  people:['sarah','marcus'],         date:'2026-05-07', time:'10:00 AM', end:'11:30 AM',  loc:'Pacific Tile — State St',            desc:'Q3 pricing review and new collection. Sarah brings Delacroix sample board.' },
+  { id:8,  title:'Design Consultation — Nakamuras',  people:['owner','sarah','alex'],   date:'2026-05-07', time:'2:00 PM',  end:'3:00 PM',   loc:'1230 Las Positas Rd, SB',            desc:'In-home consultation. Whole-home renovation. Alex to sketch rough scope estimate.' },
+  { id:9,  title:'Delacroix Bath — Framing Day 2',   people:['tom','diego'],            date:'2026-05-07', time:'7:30 AM',  end:'5:00 PM',   loc:'88 Olive Mill Rd, Montecito',        desc:'Framing wrap-up. Inspection prep.' },
+  { id:10, title:'Delacroix Bath — Tile Install',    people:['tom','diego'],            date:'2026-05-08', time:'7:30 AM',  end:'5:00 PM',   loc:'88 Olive Mill Rd, Montecito',        desc:'Tile day 1. Confirm grout selection with client beforehand.' },
+  { id:11, title:'Weekly Team Standup',              people:['owner','marcus','sarah','alex','tom','diego'], date:'2026-05-11', time:'9:00 AM', end:'9:30 AM', loc:'Slack Huddle', desc:'Weekly all-hands.' },
+  { id:12, title:'Hartley Kitchen — Cabinet Install',people:['tom','diego','marcus'],   date:'2026-05-11', time:'8:00 AM',  end:'5:00 PM',   loc:'142 Sycamore Rd, SB',               desc:'Cabinet installation day 1. Tom and Diego on-site, Marcus checking in at noon.' },
+  { id:13, title:'Estimate Presentation — Petersons',people:['owner','sarah','alex'],   date:'2026-05-12', time:'11:00 AM', end:'12:00 PM',  loc:'Office — 802 Chapala St',            desc:'Present $180k kitchen + living room estimate. Alex walks through numbers, Sarah presents design.' },
+  { id:14, title:'Hartley Kitchen — Cabinet Day 2',  people:['tom','diego'],            date:'2026-05-12', time:'8:00 AM',  end:'5:00 PM',   loc:'142 Sycamore Rd, SB',               desc:'Cabinets day 2. Upper cabinets and crown molding.' },
+  { id:15, title:'Q2 Revenue Review',               people:['owner','alex'],            date:'2026-05-13', time:'All day',  end:'',          loc:'',                                   desc:'Close Q2 books. All invoices finalized. P&L due to accountant EOD.' },
+  { id:16, title:'1:1 — Marcus',                    people:['owner','marcus'],          date:'2026-05-13', time:'2:00 PM',  end:'2:30 PM',   loc:'Office',                             desc:'Monthly check-in. Review Delacroix and Hartley timelines.' },
+  { id:17, title:'Weekly Team Standup',              people:['owner','marcus','sarah','alex','tom','diego'], date:'2026-05-14', time:'9:00 AM', end:'9:30 AM', loc:'Slack Huddle', desc:'Weekly all-hands.' },
+  { id:18, title:'Team Lunch',                      people:['owner','marcus','sarah','alex','tom','diego'], date:'2026-05-14', time:'12:00 PM',end:'1:30 PM', loc:'Loquita Santa Barbara', desc:'Monthly team lunch — everyone invited.' },
+  { id:19, title:'Client Check-in — Delacroix',     people:['owner','marcus'],          date:'2026-05-14', time:'4:00 PM',  end:'4:30 PM',   loc:'Phone',                              desc:'Tile progress update. Share photos, confirm fixture delivery.' },
+  { id:20, title:'Weekly Team Standup',              people:['owner','marcus','sarah','alex','tom','diego'], date:'2026-05-18', time:'9:00 AM', end:'9:30 AM', loc:'Slack Huddle', desc:'Weekly all-hands.' },
+  { id:21, title:'Morales Addition — Demo Day',      people:['tom','diego','marcus'],   date:'2026-05-18', time:'7:00 AM',  end:'5:00 PM',   loc:'34 Pedregosa St, SB',               desc:'Demolition begins. Full crew. Homeowners away.' },
+  { id:22, title:'New Lead — Worthington',           people:['owner','sarah'],          date:'2026-05-19', time:'10:00 AM', end:'11:00 AM',  loc:'Office — 802 Chapala St',            desc:'Discovery call. Referred by Hartleys. Backyard ADU + kitchen.' },
+  { id:23, title:'1:1 — Sarah',                     people:['owner','sarah'],          date:'2026-05-19', time:'2:00 PM',  end:'2:30 PM',   loc:'Office',                             desc:'Monthly check-in with Sarah. Pipeline, design backlog, Nakamura scope.' },
+  { id:24, title:'Hartley Kitchen — Final Walkthrough',people:['owner','marcus','sarah'],date:'2026-05-20',time:'3:00 PM', end:'4:30 PM',   loc:'142 Sycamore Rd, SB',               desc:'Client final walkthrough. Punch list sign-off. All three needed.' },
+  { id:25, title:'Portfolio Photo Shoot — Delacroix',people:['sarah','marcus'],        date:'2026-05-21', time:'10:00 AM', end:'1:00 PM',   loc:'88 Olive Mill Rd, Montecito',        desc:'Professional photography. Sarah styles, Marcus coordinates access.' },
+  { id:26, title:'Nakamura Scope — Internal Deadline',people:['sarah','alex'],         date:'2026-05-22', time:'All day',  end:'',          loc:'',                                   desc:'Sarah + Alex finalize design scope and phase 1 budget before EOD.' },
+  { id:27, title:'Memorial Day — Closed',           people:['owner','marcus','sarah','alex','tom','diego'], date:'2026-05-25', time:'All day', end:'', loc:'', desc:'Office closed. Federal holiday.' },
+  { id:28, title:'Morales — Framing Inspection',    people:['tom','marcus'],           date:'2026-05-26', time:'9:00 AM',  end:'10:00 AM',  loc:'34 Pedregosa St, SB',               desc:'City inspector on-site. Tom leads, Marcus handles paperwork.' },
+  { id:29, title:'Weekly Team Standup',              people:['owner','marcus','sarah','alex','tom','diego'], date:'2026-05-26', time:'9:30 AM', end:'10:00 AM', loc:'Slack Huddle', desc:'Abbreviated post-holiday standup.' },
+  { id:30, title:'Design Consultation — Brennans',  people:['owner','sarah'],          date:'2026-05-27', time:'11:00 AM', end:'12:00 PM',  loc:'Office — 802 Chapala St',            desc:'$375 consultation. Primary suite expansion and closet system.' },
+  { id:31, title:'H2 Planning Session',             people:['owner','marcus','sarah','alex'], date:'2026-05-28', time:'9:00 AM', end:'12:00 PM', loc:'Office — 802 Chapala St', desc:'Pipeline review, hiring discussion, Q3/Q4 projections. Leadership team only.' },
+  { id:32, title:'Nakamura — Contract Signing',     people:['owner','sarah','alex'],   date:'2026-05-29', time:'2:00 PM',  end:'3:00 PM',   loc:'Office — 802 Chapala St',            desc:'Sign Phase 1 contract. Collect design retainer. Owner closes, Sarah + Alex present timeline.' },
+];
+
+/* ─── STATE ───────────────────────────────────────────────── */
+const today   = new Date();
+let curYear   = today.getFullYear();
+let curMonth  = today.getMonth();
+let visible   = new Set(Object.keys(PEOPLE)); // which person-calendars are shown
+let nextId    = 700;
+const MONTHS  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const todayStr= `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+/* ─── HELPERS ─────────────────────────────────────────────── */
+function fmtDate(dt) {
+  const [y,m,d] = dt.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+}
+function ico(t) {
+  return {
+    cal:  `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 7h12"/><path d="M5 1v4M11 1v4"/></svg>`,
+    clk:  `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>`,
+    pin:  `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M8 1.5a4 4 0 0 1 4 4c0 3-4 9-4 9s-4-6-4-9a4 4 0 0 1 4-4z"/><circle cx="8" cy="5.5" r="1.5"/></svg>`,
+    ppl:  `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="6" cy="5" r="2.5"/><path d="M1 13c0-2.76 2.24-5 5-5s5 2.24 5 5"/><circle cx="12" cy="5" r="2"/><path d="M15 12.5c0-1.93-1.34-3.5-3-3.5"/></svg>`,
+    trash:`<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3 4h10"/><path d="M6 4V2h4v2"/><rect x="4" y="4" width="8" height="10" rx="1"/></svg>`,
+  }[t] || '';
+}
+
+/* Compute which people on this event are currently visible */
+function visiblePeople(ev) {
+  return (ev.people || []).filter(p => visible.has(p));
+}
+
+/* Build a CSS linear-gradient stripe for the pill left bar */
+function stripeStyle(peopleKeys) {
+  if (!peopleKeys.length) return 'background:#ccc';
+  const pct = 100 / peopleKeys.length;
+  const stops = peopleKeys.map((k, i) => {
+    const c = PEOPLE[k].color;
+    return `${c} ${i*pct}% ${(i+1)*pct}%`;
+  }).join(',');
+  return `background:linear-gradient(to bottom,${stops})`;
+}
+
+/* ─── LEGEND BAR ──────────────────────────────────────────── */
+function buildLegend() {
+  const bar = document.getElementById('legendBar');
+  let html = '<span class="legend-lbl">Calendars:</span>';
+  Object.entries(PEOPLE).forEach(([k,p]) => {
+    const on = visible.has(k);
+    html += `<button class="person-pill${on?' on':''}"
+      style="${on?`border-color:${p.color};background:${p.light};color:${p.color}`:''}"
+      onclick="togglePerson('${k}')">
+      <span class="person-dot" style="background:${on?p.color:p.light};border:1.5px solid ${p.color}"></span>
+      ${p.name}
+    </button>`;
+  });
+  bar.innerHTML = html;
+}
+
+/* ─── CALENDAR GRID ───────────────────────────────────────── */
+function buildCal() {
+  document.getElementById('monthLbl').textContent = `${MONTHS[curMonth]} ${curYear}`;
+  const first = new Date(curYear,curMonth,1).getDay();
+  const dim   = new Date(curYear,curMonth+1,0).getDate();
+  const dipm  = new Date(curYear,curMonth,0).getDate();
+  const cells = [];
+  for (let i=first-1;i>=0;i--) cells.push({d:dipm-i,cur:false,dt:null});
+  for (let d=1;d<=dim;d++) {
+    const mo=curMonth+1;
+    cells.push({d,cur:true,dt:`${curYear}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`});
+  }
+  const rem=7-(cells.length%7); if(rem<7) for(let i=1;i<=rem;i++) cells.push({d:i,cur:false,dt:null});
+
+  // Group events by date, filtered by visibility
+  const byDate = {};
+  events.forEach(ev => {
+    const vp = visiblePeople(ev);
+    if (!vp.length) return; // none of this event's people are visible
+    if (!byDate[ev.date]) byDate[ev.date]=[];
+    byDate[ev.date].push({ev, vp});
+  });
+
+  let html='';
+  for (let w=0;w<cells.length;w+=7) {
+    html+='<div class="cal-week">';
+    for (let d=w;d<w+7;d++) {
+      const c=cells[d];
+      const isToday=c.dt===todayStr;
+      const dayItems=c.dt?(byDate[c.dt]||[]):[];
+      html+=`<div class="cal-day${c.cur?'':' other'}"${c.cur?` onclick="dayClick(event,'${c.dt}')"`:''}>`;
+      html+=`<div class="day-num${isToday?' today':''}"${c.cur?` onclick="dayNumClick(event,'${c.dt}')"`:''}>${c.d}</div>`;
+
+      dayItems.forEach(({ev,vp})=>{
+        // Build stripe segments
+        const segH = 100/vp.length;
+        const segs = vp.map((k,i)=>
+          `<div class="ev-stripe-seg" style="background:${PEOPLE[k].color};height:${segH}%"></div>`
+        ).join('');
+
+        html+=`<div class="ev-pill" onclick="evClick(event,${ev.id})" title="${ev.title}">
+          <div class="ev-stripe" style="min-width:6px">${segs}</div>
+          <div class="ev-body">
+            ${ev.time!=='All day'?`<span class="ev-time">${ev.time}</span>`:''}${ev.title}
+          </div>
+        </div>`;
+      });
+
+      html+='</div>';
+    }
+    html+='</div>';
+  }
+  document.getElementById('calGrid').innerHTML=html;
+}
+
+/* ─── INTERACTIONS ────────────────────────────────────────── */
+function togglePerson(k) { visible.has(k)?visible.delete(k):visible.add(k); buildLegend(); buildCal(); }
+function dayClick(e,dt)   { if(e.target.closest('.ev-pill')||e.target.classList.contains('day-num'))return; openCreate(dt); }
+function dayNumClick(e,dt){ e.stopPropagation(); openCreate(dt); }
+function evClick(e,id)    { e.stopPropagation(); const ev=events.find(x=>x.id===id); if(ev)openDetail(ev); }
+
+document.getElementById('prevBtn').onclick=()=>{ if(curMonth===0){curYear--;curMonth=11;}else curMonth--; buildCal(); };
+document.getElementById('nextBtn').onclick=()=>{ if(curMonth===11){curYear++;curMonth=0;}else curMonth++; buildCal(); };
+document.getElementById('todayBtn').onclick=()=>{ curYear=today.getFullYear();curMonth=today.getMonth(); buildCal(); };
+
+/* ─── MODALS ──────────────────────────────────────────────── */
+function showModal(html,wide=false){
+  const c=document.getElementById('modalCard');
+  c.className='modal'+(wide?' wide':'');
+  c.innerHTML=html;
+  document.getElementById('overlay').style.display='flex';
+}
+function closeModal(){ document.getElementById('overlay').style.display='none'; }
+function handleOverlay(e){ if(e.target===document.getElementById('overlay'))closeModal(); }
+
+/* ─── DETAIL MODAL ────────────────────────────────────────── */
+function openDetail(ev) {
+  const ts = ev.time==='All day'?'All day':ev.end?`${ev.time} – ${ev.end}`:ev.time;
+
+  // Build multi-stripe header bar
+  const stripeCss = ev.people.map(k=>PEOPLE[k].color).join(',');
+  const stripeWidth = ev.people.length * 6;
+  const segsHtml = ev.people.map(k=>
+    `<div style="flex:1;background:${PEOPLE[k].color}"></div>`
+  ).join('');
+
+  // Avatar chips
+  const chips = ev.people.map(k => {
+    const p = PEOPLE[k];
+    const initials = p.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+    return `<div class="avatar-chip" style="background:${p.light}">
+      <div class="avatar-circle" style="background:${p.color}">${initials}</div>
+      <span style="color:${p.color};font-size:12px">${p.name}</span>
+    </div>`;
+  }).join('');
+
+  showModal(`
+    <div class="modal-top" style="align-items:center">
+      <div style="display:flex;height:10px;width:${Math.min(stripeWidth,80)}px;border-radius:5px;overflow:hidden;gap:1px">
+        ${ev.people.map(k=>`<div style="flex:1;background:${PEOPLE[k].color}"></div>`).join('')}
+      </div>
+      <button class="close-x" onclick="closeModal()">×</button>
+    </div>
+    <div class="det-title">${ev.title}</div>
+    <div class="det-row">${ico('cal')} ${fmtDate(ev.date)}</div>
+    <div class="det-row">${ico('clk')} ${ts}</div>
+    ${ev.loc?`<div class="det-row">${ico('pin')} ${ev.loc}</div>`:''}
+    <div class="det-row" style="align-items:flex-start">${ico('ppl')} <div class="avatar-row">${chips}</div></div>
+    ${ev.desc?`<div class="det-desc">${ev.desc}</div>`:'<div style="height:12px"></div>'}
+    <div class="modal-actions">
+      <button class="btn-out" onclick="alert('Live mode: opens event in Google Calendar.')">Edit in Google Cal</button>
+      <button class="btn-del" onclick="deleteEv(${ev.id})">${ico('trash')} Delete</button>
+    </div>
+  `);
+}
+
+function deleteEv(id){ events=events.filter(e=>e.id!==id); closeModal(); buildCal(); }
+
+/* ─── CREATE MODAL ────────────────────────────────────────── */
+function openCreate(dt) {
+  const personBtns = Object.entries(PEOPLE).map(([k,p]) => {
+    const initials = p.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+    return `<div class="pcheck" id="pc-${k}" onclick="togglePersonCreate('${k}')"
+      style="border-color:var(--border);background:transparent;color:var(--muted)">
+      <div class="avatar-circle" style="background:${p.color};width:18px;height:18px;font-size:9px">${initials}</div>
+      ${p.name}
+    </div>`;
+  }).join('');
+
+  window._createPeople = new Set();
+  showModal(`
+    <div class="modal-top">
+      <div>
+        <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">New event</div>
+        <div style="font-size:13px;font-weight:500;margin-top:2px">${fmtDate(dt)}</div>
+      </div>
+      <button class="close-x" onclick="closeModal()">×</button>
+    </div>
+    <div class="f-grp"><input type="text" class="f-title" id="evT" placeholder="Event title" oninput="updBtn()" /></div>
+    <div class="f-grp time-row">
+      <div><label class="f-lbl">Start time</label><input type="text" id="evS" value="9:00 AM" /></div>
+      <div><label class="f-lbl">End time</label><input type="text" id="evE" value="10:00 AM" /></div>
+    </div>
+    <div class="f-grp">
+      <label class="f-lbl">Who's on this event?</label>
+      <div class="person-sel-grid" id="personGrid">${personBtns}</div>
+    </div>
+    <div class="f-grp"><input type="text" id="evL" placeholder="Location (optional)" /></div>
+    <div class="f-grp"><textarea id="evD" rows="3" placeholder="Notes (optional)"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-out" onclick="closeModal()">Cancel</button>
+      <button class="btn-pri" id="createBtn" disabled onclick="createEv('${dt}')">Create event</button>
+    </div>
+  `, true);
+  document.getElementById('evT').focus();
+}
+
+function togglePersonCreate(k) {
+  const btn = document.getElementById(`pc-${k}`);
+  const p   = PEOPLE[k];
+  if (window._createPeople.has(k)) {
+    window._createPeople.delete(k);
+    btn.style.borderColor = 'var(--border)';
+    btn.style.background  = 'transparent';
+    btn.style.color       = 'var(--muted)';
+  } else {
+    window._createPeople.add(k);
+    btn.style.borderColor = p.color;
+    btn.style.background  = p.light;
+    btn.style.color       = p.color;
+  }
+}
+
+function updBtn() {
+  const btn = document.getElementById('createBtn');
+  const val = document.getElementById('evT')?.value.trim();
+  if (btn) btn.disabled = !val;
+}
+
+function createEv(dt) {
+  const title = document.getElementById('evT')?.value.trim();
+  if (!title) return;
+  const people = [...window._createPeople];
+  if (!people.length) {
+    // default to owner if nobody selected
+    people.push('owner');
+  }
+  events.push({
+    id: nextId++, title, people, date: dt,
+    time: document.getElementById('evS')?.value || '9:00 AM',
+    end:  document.getElementById('evE')?.value  || '10:00 AM',
+    loc:  document.getElementById('evL')?.value  || '',
+    desc: document.getElementById('evD')?.value  || '',
+  });
+  closeModal(); buildCal();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GOOGLE CALENDAR LIVE MODE — MULTI-CALENDAR / PER PERSON
+   ──────────────────────────────────────────────────────────────
+   HOW IT WORKS WITH GOOGLE CALENDAR:
+
+   OPTION A — Individual calendars per person (mirrors Teamup exactly)
+   ─────────────────────────────────────────────────────────────────
+   Each team member has their own Google Calendar. In Google
+   Workspace you can share calendars across your domain so an
+   admin or service account can read everyone's.
+
+   The app reads each person's calendar for the month, deduplicates
+   events by title+date (so a shared event appears once with all
+   attendees' colors), and renders the multi-stripe pill.
+
+   OPTION B — One shared calendar, event attendees = people
+   ─────────────────────────────────────────────────────────────────
+   One "Elite Remodels" Google Calendar holds all events. Each event
+   has attendees (team members). The app reads the attendees field
+   and maps email → PEOPLE key to build the stripe.
+
+   This is simpler and maps best to Google Calendar invites:
+   when you invite tom@eliteremodels.com to an event, Tom's stripe
+   appears automatically.
+
+  ── LIVE CODE (uncomment after adding credentials above) ─────────
+
+  const GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
+  const GOOGLE_API_KEY   = 'YOUR_API_KEY';
+
+  // Map email addresses to PEOPLE keys
+  const EMAIL_MAP = {
+    'owner@eliteremodels.com':  'owner',
+    'marcus@eliteremodels.com': 'marcus',
+    'tom@eliteremodels.com':    'tom',
+    'diego@eliteremodels.com':  'diego',
+    'sarah@eliteremodels.com':  'sarah',
+    'alex@eliteremodels.com':   'alex',
+  };
+
+  // Calendar IDs to read (one per person, or just 'primary' for shared)
+  const CALENDARS = Object.values(PEOPLE).map(p => p.gCalId);
+
+  let tokenClient;
+
+  async function initGoogle() {
+    await new Promise(res => gapi.load('client', res));
+    await gapi.client.init({
+      apiKey: GOOGLE_API_KEY,
+      discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']
+    });
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/calendar',
+      callback: async resp => { if(!resp.error) await fetchAllCalendars(); }
+    });
+  }
+
+  function signIn() { tokenClient.requestAccessToken({ prompt:'' }); }
+
+  async function fetchAllCalendars() {
+    const start = new Date(curYear,curMonth,1).toISOString();
+    const end   = new Date(curYear,curMonth+1,0,23,59).toISOString();
+
+    // Fetch all calendars in parallel
+    const allResults = await Promise.all(
+      CALENDARS.map(calId =>
+        gapi.client.calendar.events.list({
+          calendarId: calId,
+          timeMin: start, timeMax: end,
+          singleEvents: true, orderBy: 'startTime', maxResults: 250
+        }).then(r => ({ calId, items: r.result.items }))
+      )
+    );
+
+    // Merge: key = eventId, value = {ev, peopleSet}
+    const merged = {};
+    allResults.forEach(({ calId, items }) => {
+      const personKey = Object.keys(PEOPLE).find(k => PEOPLE[k].gCalId === calId);
+      items.forEach(item => {
+        if (!merged[item.id]) {
+          merged[item.id] = {
+            id: item.id, gId: item.id,
+            title: item.summary || '(no title)',
+            date:  (item.start.date || item.start.dateTime || '').substring(0,10),
+            time:  item.start.dateTime ? fmtTime(item.start.dateTime) : 'All day',
+            end:   item.end.dateTime   ? fmtTime(item.end.dateTime)   : '',
+            loc:   item.location  || '',
+            desc:  item.description || '',
+            people: [],
+          };
+        }
+        if (personKey && !merged[item.id].people.includes(personKey)) {
+          merged[item.id].people.push(personKey);
+        }
+        // Also pick up attendees if using Option B
+        (item.attendees || []).forEach(att => {
+          const pk = EMAIL_MAP[att.email];
+          if (pk && !merged[item.id].people.includes(pk)) merged[item.id].people.push(pk);
+        });
+      });
+    });
+
+    events = Object.values(merged);
+    buildCal();
+  }
+
+  async function createGoogleEvent(ev) {
+    // Creates event and invites all selected people
+    await gapi.client.calendar.events.insert({
+      calendarId: 'primary',
+      resource: {
+        summary:  ev.title,
+        location: ev.loc,
+        description: ev.desc,
+        start: { dateTime: `${ev.date}T${to24h(ev.time)}:00`, timeZone: 'America/Los_Angeles' },
+        end:   { dateTime: `${ev.date}T${to24h(ev.end)}:00`,  timeZone: 'America/Los_Angeles' },
+        attendees: ev.people.map(k => ({ email: PEOPLE[k].gCalId })),
+      }
+    });
+  }
+
+  function fmtTime(dt) { return new Date(dt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}); }
+  function to24h(t) {
+    const [time,ampm]=t.split(' '); let [h,m]=time.split(':').map(Number);
+    if(ampm==='PM'&&h<12)h+=12; if(ampm==='AM'&&h===12)h=0;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  }
+
+  window.onload = initGoogle;
+
+  ══════════════════════════════════════════════════════════════ */
+
+/* ─── INIT ────────────────────────────────────────────────── */
+buildLegend();
+buildCal();
+</script>
+</body>
+</html>
