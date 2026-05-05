@@ -32,10 +32,9 @@
   3. Uncomment the script tags and LIVE MODE block at the bottom
   ══════════════════════════════════════════════════════════════════
   -->
-  <!-- UNCOMMENT FOR LIVE MODE:
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="https://accounts.google.com/gsi/client"></script>
-  -->
+  
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -254,12 +253,12 @@
    In live mode, each maps to a Google Calendar ID
 ══════════════════════════════════════════════════════════════ */
 const PEOPLE = {
-  owner:  { name:'Owner',          color:'#2d7dd2', light:'#ddeeff', gCalId:'owner@eliteremodels.com'   },
-  marcus: { name:'Marcus (PM)',     color:'#2a9d5c', light:'#d6f2e4', gCalId:'marcus@eliteremodels.com'  },
-  tom:    { name:'Tom (Lead)',       color:'#d45a2a', light:'#fae3d6', gCalId:'tom@eliteremodels.com'     },
-  diego:  { name:'Diego (Crew)',    color:'#7b5ea7', light:'#ede6f7', gCalId:'diego@eliteremodels.com'   },
-  sarah:  { name:'Sarah (Design)',  color:'#b5386e', light:'#fbe0ec', gCalId:'sarah@eliteremodels.com'   },
-  alex:   { name:'Alex (Est.)',     color:'#c08000', light:'#fdf0cc', gCalId:'alex@eliteremodels.com'    },
+  Jerry:  { name:'Jerry',          color:'#2d7dd2', light:'#ddeeff', gCalId:'jerry@remodelsbyelite.com'   },
+  Jacob: { name:'Jacob',     color:'#2a9d5c', light:'#d6f2e4', gCalId:'jacob@remodelsbyelite.com'  },
+  Trina:    { name:'Trina',       color:'#d45a2a', light:'#fae3d6', gCalId:'trina@remodelsbyelite.com'     },
+  Jane:  { name:'Jane',    color:'#7b5ea7', light:'#ede6f7', gCalId:'jane@remodelsbyelite.com'   },
+  Ricardo:  { name:'Ricardo',  color:'#b5386e', light:'#fbe0ec', gCalId:'ricardo@remodelsbyelite.com'   },
+  Kevin:   { name:'Kevin',     color:'#c08000', light:'#fdf0cc', gCalId:'kevin@remodelsbyelite.com'    },
 };
 
 /* ══════════════════════════════════════════════════════════════
@@ -554,44 +553,17 @@ function createEv(dt) {
   closeModal(); buildCal();
 }
 
-/* ══════════════════════════════════════════════════════════════
-   GOOGLE CALENDAR LIVE MODE — MULTI-CALENDAR / PER PERSON
-   ──────────────────────────────────────────────────────────────
-   HOW IT WORKS WITH GOOGLE CALENDAR:
-
-   OPTION A — Individual calendars per person (mirrors Teamup exactly)
-   ─────────────────────────────────────────────────────────────────
-   Each team member has their own Google Calendar. In Google
-   Workspace you can share calendars across your domain so an
-   admin or service account can read everyone's.
-
-   The app reads each person's calendar for the month, deduplicates
-   events by title+date (so a shared event appears once with all
-   attendees' colors), and renders the multi-stripe pill.
-
-   OPTION B — One shared calendar, event attendees = people
-   ─────────────────────────────────────────────────────────────────
-   One "Elite Remodels" Google Calendar holds all events. Each event
-   has attendees (team members). The app reads the attendees field
-   and maps email → PEOPLE key to build the stripe.
-
-   This is simpler and maps best to Google Calendar invites:
-   when you invite tom@eliteremodels.com to an event, Tom's stripe
-   appears automatically.
-
-  ── LIVE CODE (uncomment after adding credentials above) ─────────
-
-  const GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
-  const GOOGLE_API_KEY   = 'YOUR_API_KEY';
+  const GOOGLE_CLIENT_ID = '85225957404-br2v5l66tl3p0fu5is7168odrhh0s7a0.apps.googleusercontent.com';
+  const GOOGLE_API_KEY   = 'AIzaSyBrzRfiK2lcVEBrSrIgxLDb_bnSC3a_DeM';
 
   // Map email addresses to PEOPLE keys
   const EMAIL_MAP = {
-    'owner@eliteremodels.com':  'owner',
-    'marcus@eliteremodels.com': 'marcus',
-    'tom@eliteremodels.com':    'tom',
-    'diego@eliteremodels.com':  'diego',
-    'sarah@eliteremodels.com':  'sarah',
-    'alex@eliteremodels.com':   'alex',
+    'jerry@remodelsbyelite.com':  'Jerry',
+    'jacob@remodelsbyelite.com': 'Jacob',
+    'trina@remodelsbyelite.com':    'Trina',
+    'jane@remodelsbyelite.com':  'Jane',
+    'ricardo@remodelsbyelite.com':  'Ricardo',
+    'kevin@remodelsbyelite.com':   'Kevin',
   };
 
   // Calendar IDs to read (one per person, or just 'primary' for shared)
@@ -688,8 +660,6 @@ function createEv(dt) {
   ══════════════════════════════════════════════════════════════ */
 
 /* ─── INIT ────────────────────────────────────────────────── */
-buildLegend();
-buildCal();
 </script>
 </body>
 </html>
